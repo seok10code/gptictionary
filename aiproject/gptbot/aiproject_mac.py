@@ -13,18 +13,17 @@ from azure.ai.formrecognizer import DocumentAnalysisClient
 from azure.core.credentials import AzureKeyCredential
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 
-load_dotenv()
+
 today_date = date.today().isoformat()
 
 TELEGRAM_API_KEY=os.environ.get('TELEGRAM_API_KEY')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 CHAT_ID=os.environ.get('CHAT_ID')
-FORM_RECOGNIZER_KEY=os.environ.get('FORM_RECOGNIZER_KEY')
-FORM_RECOGNIZER_ENDPOINT=os.environ.get('FORM_RECOGNIZER_ENDPOINT')
-STORAGE_CONSTR =os.environ.get('STORAGE_CONSTR')
-SOURCE_NAME =os.environ.get('SOURCE_NAME')
+# FORM_RECOGNIZER_KEY=os.environ.get('FORM_RECOGNIZER_KEY')
+# FORM_RECOGNIZER_ENDPOINT=os.environ.get('FORM_RECOGNIZER_ENDPOINT')
+# STORAGE_CONSTR =os.environ.get('STORAGE_CONSTR')
+# SOURCE_NAME =os.environ.get('SOURCE_NAME')
 PW=os.environ.get('PW')
-BASE_URL = os.environ.get('BASE_URL')
 
 
 
@@ -36,6 +35,27 @@ async def echo(update, context):
         query = update.message.text
         answer = func.get_completion(client, query)
         await context.bot.send_message(chat_id=update.effective_chat.id, text=answer)
+        
+async def getPronounce(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if context.args:
+        # Join the arguments into a single string
+        text_to_speech = ' '.join(context.args)
+        print("Text to speech:", text_to_speech)
+
+        # Convert text to speech
+        tts = gTTS(text=text_to_speech, lang='en')
+        audio_buffer = io.BytesIO()
+        tts.write_to_fp(audio_buffer)
+        audio_buffer.seek(0)
+        
+        # 오디오 파일 전송
+        await update.message.reply_audio(audio=audio_buffer, filename=f"{text_to_speech}.mp3")
+        # 버퍼를 초기화
+        audio_buffer.seek(0)
+        audio_buffer.truncate(0)
+    else:
+        await update.message.reply_text("Please provide a word to search.", parse_mode='markdown')
+
 
 ################################## VOCABULARY ##########################
 async def getVocab(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -43,14 +63,14 @@ async def getVocab(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     print(context.args)
     if context.args:
         if '/' not in ' '.join(context.args):
-            word = ' '.join(context.args)
+            word = ' '.join(context.args).strip()
             result = func.get_vocab(word)  # DB에서 단어 검색 결과를 가져오는 함수
             audio_text=result
 
         else:
             arg=' '.join(context.args).split('/')
-            word = arg[0]
-            synonym = arg[1]  # 검색할 단어 추출
+            word = arg[0].strip()
+            synonym = arg[1].strip()  # 검색할 단어 추출
             if synonym:
                 data = json.loads(func.get_vocab(word))  # DB에서 단어 검색 결과를 가져오는 함수
                 data['synonyms'] = synonym
@@ -137,12 +157,16 @@ async def getTodayVocab(update: Update, context: ContextTypes.DEFAULT_TYPE)-> No
 
 async def setSynonym(update: Update, context: ContextTypes.DEFAULT_TYPE, args: list)-> None:
     if args:
-        data = func.get_vocab(args[0])  # data는 JSON 형식의 문자열이라고 가정합니다.
+        data = ' '.join(args).split('/')
+        word = data[0].strip()
+        syno = data[1].strip()
+        print(data)
+        data_dict = json.loads(func.get_vocab(word))  # data는 JSON 형식의 문자열이라고 가정합니다.
         # JSON 문자열을 딕셔너리로 변환
-        data_dict = json.loads(data)
+        print(data_dict)
 
         # 'synonyms'를 수정
-        data_dict['synonyms'] = args[1]
+        data_dict['synonyms'] = syno
 
         # 데이터를 업데이트 (JSON 문자열이 아닌 딕셔너리 형태로 전달)
         func.update_vocab(args[0], data_dict)
@@ -232,6 +256,12 @@ async def showWhatYouMissed(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             await context.bot.send_message(chat_id=chat_id, text=result)
 
 
+async def deleteChecker(update: Update, context: ContextTypes.DEFAULT_TYPE, args: list) -> None:
+    if args and args[0] == PW:  # args가 비어있지 않은지 확인
+        func.delete_all_checkers()  # func.delete_all이 비동기 함수일 경우
+        await update.callback_query.message.reply_text("The entire vocabulary in the database has been deleted.", parse_mode='markdown')
+    else:
+        await update.callback_query.message.reply_text("The password is incorrect.", parse_mode='markdown')
 
 
 ################################# QUIZ ############################################
@@ -268,13 +298,11 @@ async def send_question(context: CallbackContext, chat_id: int, question_index: 
     if question_index < len(questions):
         question_str = questions[question_index]
 
-        # 문자열을 딕셔너리로 변환
-        try:
+        # # 문자열을 딕셔너리로 변환
+        if isinstance(question_str, str):
             question = json.loads(question_str)
-
-        except json.JSONDecodeError:
-            print("Error: Unable to decode the question string into a dictionary.")
-            return
+        else:
+            question=question_str
 
         message = await context.bot.send_poll(
             chat_id=chat_id,
@@ -332,6 +360,7 @@ async def handle_poll_answer(update: Update, context: CallbackContext):
         func.update_checker(vocabulary,data)
         # 다음 질문으로 넘어가기
         del active_polls[poll_id]  # 현재 설문조사 삭제
+
         await send_question(context, user_id, question_index + 1, user_id, questions)  # 다음 질문 출제
 
 ################################### SENTENCE ########################################
@@ -389,20 +418,7 @@ async def getSentence(update, context: ContextTypes.DEFAULT_TYPE, args) -> None:
             if update.callback_query:
                 await update.callback_query.message.reply_text(formatted_sentence, parse_mode='markdown')
 
-            # 텍스트를 음성으로 변환
-            tts = gTTS(text=item['sentence'], lang='en')
-            audio_buffer = io.BytesIO()
-            tts.write_to_fp(audio_buffer)
-            audio_buffer.seek(0)
-
-            # 음성 파일을 전송
-            if update.callback_query:
-                await update.callback_query.message.reply_audio(audio=audio_buffer, filename=f"sentence_{idx+1}.mp3")
-
-            # 버퍼 초기화
-            audio_buffer.seek(0)
-            audio_buffer.truncate(0)
-
+            
     else:
         # 인자가 없을 때 안내 메시지
         if update.callback_query:
@@ -452,7 +468,7 @@ async def getSentences(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.callback_query.message.reply_text(formatted_sentence, parse_mode='markdown')
 
 
-async def getTodaySentences(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def getTodaySentence(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     result = func.get_today_sentence()  # DB에서 단어 검색 결과를 여기에 연결하세요
 
     # 결과가 None이거나 빈 문자열인지 확인
@@ -462,21 +478,34 @@ async def getTodaySentences(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     # 결과가 리스트 형식인지 확인 (예상 출력에 맞추어 처리)
     try:
-        sentences = result if isinstance(result, list) else json.loads(result)  # 만약 result가 JSON이라면 변환
+        sentence = result if isinstance(result, list) else json.loads(result)  # 만약 result가 JSON이라면 변환
     except json.JSONDecodeError:
         await update.callback_query.message.reply_text("Error decoding the result.", parse_mode='markdown')
         return
 
     # 각 문장을 포맷하여 하나씩 출력
-    for sentence in sentences:
-        formatted_sentence = (
-            f"*Sentence:* {sentence['sentence']}\n\n"
-            f"*Definition:* {sentence['definition']}\n\n"
-            f"*Expression:* {sentence['expression']}\n\n"
-            f"*Frequency:* {sentence['frequency']}\n\n"
-            f"*Date:* {sentence['db_load_dts']}\n"
-        )
-        await update.callback_query.message.reply_text(formatted_sentence, parse_mode='markdown')
+    formatted_sentence = (
+        f"*Sentence:* {sentence['sentence']}\n\n"
+        f"*Definition:* {sentence['definition']}\n\n"
+        f"*Expression:* {sentence['expression']}\n\n"
+        f"*Frequency:* {sentence['frequency']}\n\n"
+        f"*Date:* {sentence['db_load_dts']}\n"
+    )
+    await update.callback_query.message.reply_text(formatted_sentence, parse_mode='markdown')
+
+    # 텍스트를 음성으로 변환
+    tts = gTTS(text=sentence['sentence'], lang='en')
+    audio_buffer = io.BytesIO()
+    tts.write_to_fp(audio_buffer)
+    audio_buffer.seek(0)
+
+    # 음성 파일을 전송
+    if update.callback_query:
+        await update.callback_query.message.reply_audio(audio=audio_buffer, filename=f"{sentence['sentence'][:6]}.mp3")
+
+    # 버퍼 초기화
+    audio_buffer.seek(0)
+    audio_buffer.truncate(0)
 
 
 
@@ -488,7 +517,8 @@ async def quiz_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     btn4 = InlineKeyboardButton(text="pquiz", callback_data=f"pquiz")
     btn5 = InlineKeyboardButton(text="problems", callback_data=f"problems")
     btn6 = InlineKeyboardButton(text="checkerCnt", callback_data=f"getchekcerCount")
-    keyboard = [[btn1], [btn2], [btn4], [btn5], [btn6]]
+    btn7 = InlineKeyboardButton(text="deleteChekcer", callback_data = f"deleteChecker")
+    keyboard = [[btn1], [btn2], [btn4], [btn5], [btn6], [btn7]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     quiz_help= """
@@ -502,6 +532,8 @@ async def quiz_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 : Retrieve the problems what you got wrong answer.
 *- checkerCnt*
 : The number of vocabulary in checker table.
+*- deleteChekcer*
+: Delete all data in checker table.
     """
 
     await update.message.reply_text("MENU:", reply_markup=reply_markup, parse_mode='markdown')
@@ -583,7 +615,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     ####### sentence ##########
     elif query.data.split()[0] == 'todaySentence':
-        await getTodaySentences(update, context)
+        await getTodaySentence(update, context)
     elif query.data.split()[0] == 'getSentence':
         if len(args)==2:
             await getSentence(update, context, args)
@@ -621,7 +653,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await setSynonym(update, context, args)
     elif query.data.split()[0] == "getCntVocab":
         await getVocabCount(update, context)
-
+    elif query.data.split()[0] == "deleteChekcer":
+        await deleteChecker(update, context)
     else:
         await update.callback_query.message.reply_text("You need to provide approriate handler.")
 
@@ -637,6 +670,8 @@ if __name__ == "__main__":
         echo_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, echo)
         searching_handler = CommandHandler('search', getVocab)
         insert_sentence_handler = CommandHandler('add', insertSentence)
+        pronouns_handler = CommandHandler('pron', getPronounce)
+        application.add_handler(pronouns_handler)
         application.add_handler(echo_handler)
         application.add_handler(searching_handler)
         application.add_handler(insert_sentence_handler)

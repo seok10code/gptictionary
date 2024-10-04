@@ -7,7 +7,10 @@ from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 import datetime
 import os
 from openai import OpenAI
+from dotenv import load_dotenv
+import random
 
+load_dotenv()
 today_date = date.today().isoformat()
 
 BASE_URL = os.environ.get('BASE_URL')
@@ -238,15 +241,16 @@ def generateVocab(vocabulary):
         return None
 
 
-
+import random
 
 # 단어 테스트 (vocabTest): "/generateQuiz"
 def generateQuiz():
     
     vocab_data = get_todays_vocabs(today_date)
+
     if vocab_data:
         prompt = f"""
-                Please generate a JSON object in the following format based on the given data from the `get_todays_vocabs()` API call.
+            Please generate a JSON object in the following format based on the given data from the `get_todays_vocabs()` API call.
                 **Several data:** {vocab_data}
 
                 **Example JSON Format:**
@@ -270,24 +274,16 @@ def generateQuiz():
                 "db_load_dts": "2024-08-27"
                 }}
 
-                **Instructions:**
-
-                1. Use the "vocabulary" word from the data provided by the API to create a question by replacing it with an underscore (_____) in the example sentence.
-                2. Place the synonyms of the "vocabulary" word in parentheses at the end of the question.
-                3. Generate four options where one option is the correct "vocabulary" word, and the other three are distractors.
-                4. Ensure that the correct option is indicated by the index of the "vocabulary" word in the options array.
-                5. The JSON output should strictly follow the format provided above.
-
-                **Important:**
-                - The "vocabulary" word should be replaced with an underscore (_____).
-                - The synonyms should be listed in parentheses at the end of the question.
-                - The questions should be varied and unique, using different sentence structures and contexts.
-                - The JSON format must be followed exactly as specified, including the structure and punctuation.
-
-                **Diverse Examples**:
-                1. "The company plans to ______ a new product next year (launch, introduce).", options: ["release", "remove", "build", "create"], correct_option_id: 0
-                2. "She was ______ by the complexity of the puzzle (baffled, confused).", options: ["surprised", "amazed", "confounded", "impressed"], correct_option_id: 2
-                3. "The scientist aimed to ______ the experiment results (validate, confirm).", options: ["disprove", "analyze", "duplicate", "validate"], correct_option_id: 3
+             **Instructions:**
+                        1. Use the vocabulary word (from voca['vocabulary']) to create a fill-in-the-blank question by replacing the vocabulary word in the sentence with an underscore (_____).
+                        2. At the end of the question, include synonyms of the vocabulary word in parentheses, **but exclude the vocabulary word itself**.
+                        3. The options array must contain 4 items: the vocabulary word and three distractors. **Distractors must be contextually and semantically relevant but should not include any synonyms** of the vocabulary word or the vocabulary word itself in the parentheses.
+                        4. The correct_option_id should indicate the position of the vocabulary word in the options array. The correct option's position should be **random** to avoid predictability.
+                        5. Ensure that **none of the synonyms listed in parentheses** are used as distractors in the options array.
+                        6. The distractors should be **contextually relevant** to the vocabulary word but not its direct synonyms. Make sure that distractors are meaningful and fit the context of the sentence but do not duplicate the vocabulary word or other distractors.
+                        7. The question you create must be different from the previous problem and provide a fresh context.
+                        8. **Ensure that the correct option (the vocabulary word) is placed at a random position** within the "options" array, and the correct option's index should be reflected as `correct_option_id`.
+                        9. The **options array must contain exactly 4 options**. If the vocabulary word has fewer synonyms, use contextually related words as distractors. Ensure no duplicated options in the array.
 
                 Finally, you will return the output in this exact format:
                 **final format -> list**
@@ -298,6 +294,8 @@ def generateQuiz():
                 ]
                 Please return only the JSON object as a string, with no additional text.
                 """
+
+
         client = OpenAI(api_key=OPENAI_API_KEY)
 
         query = f"{prompt}"
@@ -308,7 +306,10 @@ def generateQuiz():
             result = []
             for question in data:
                 vocabulary = question['options'][question['correct_option_id']]
+                random.shuffle(question['options'])
+                question['correct_option_id'] = question['options'].index(vocabulary)
                 checker_data = get_checker(vocabulary)
+                
                 if checker_data is None:
                     newdata = {
                         "vocabulary": vocabulary,

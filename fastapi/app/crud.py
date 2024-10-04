@@ -53,9 +53,8 @@ def get_checker(db: Session, vocab_checker: str):
 def get_checker_by_priority(db: Session):
     checkers = (
         db.query(models.Checker)
-        .filter(models.Checker.priority >= 0)  # priority가 1 이상인 것만 필터링
         .order_by(models.Checker.priority.desc())  # priority 기준으로 내림차순 정렬
-        .all()
+        .limit(5)
     )
     return [schema.Checker.from_orm(checker) for checker in checkers]
 
@@ -100,7 +99,7 @@ def get_sentences_by_frequency(db: Session):
     sentences = (
         db.query(models.Sentences)
         .order_by(models.Sentences.frequency.asc())  # frequency 기준 오름차순 정렬
-        .limit(5)  # 5개만 가져옴
+        .limit(1)  # 5개만 가져옴
         .all()
     )
     return [schema.Sentence.from_orm(sentence) for sentence in sentences]
