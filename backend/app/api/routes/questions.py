@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.templates import templates
 from backend.app.db.database import get_db
-from backend.app.services.openai_service import ask_openai
+from backend.app.services.openai_service import ask_openai, extract_word_candidate
 from backend.app.services.embedding_service import create_embedding
 from backend.app.services.qdrant_service import (
     save_question_to_qdrant,
@@ -27,6 +27,7 @@ def questions_page(request: Request):
         context={
             "question": None,
             "answer": None,
+            "candidate": None,
             "similar_questions": [],
         },
     )
@@ -40,6 +41,7 @@ def ask_question(
 ):
     question = question.strip()
     answer = None
+    candidate = None
     similar_questions = []
 
     try:
@@ -83,6 +85,11 @@ def ask_question(
                     vector=vector,
                 )
 
+            candidate = extract_word_candidate(
+                question=question,
+                answer=answer,
+            )
+
     except Exception as e:
         answer = f"에러 발생: {str(e)}"
 
@@ -92,6 +99,7 @@ def ask_question(
         context={
             "question": question,
             "answer": answer,
+            "candidate": candidate,
             "similar_questions": similar_questions,
         },
     )

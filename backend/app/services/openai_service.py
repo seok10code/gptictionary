@@ -88,7 +88,7 @@ def generate_word_info(vocabulary: str) -> dict:
         return {
             "valid": False
         }
-    
+
 
 def ask_openai(question: str) -> str:
     response = client.chat.completions.create(
@@ -107,3 +107,90 @@ def ask_openai(question: str) -> str:
     )
 
     return response.choices[0].message.content
+
+
+def extract_word_candidate(question: str, answer: str) -> dict | None:
+    prompt = f"""
+        You are an expert English teacher for Korean learners.
+
+        From the user's question and the answer, extract ONE useful English word or phrase worth saving to a vocabulary notebook.
+
+        Return ONLY valid JSON.
+        Do not use markdown.
+        Do not add explanations outside JSON.
+
+        If there is no useful English word or phrase to save, return:
+        {{
+        "has_candidate": false
+        }}
+
+        If there is a useful word or phrase, return:
+        {{
+        "has_candidate": true,
+        "vocabulary": "English word or phrase",
+        "definition": "Natural Korean meaning",
+        "sentence": "Natural English example sentence using the word or phrase",
+        "synonyms": "synonym1, synonym2, synonym3",
+        "usage_note": "Korean nuance explanation + real-life usage + two short English conversation examples"
+        }}
+
+        Requirements:
+        - Pick only ONE best expression.
+        - Prefer the expression the user asked about.
+        - Do not extract random common words.
+        - vocabulary must be English only.
+        - definition must be Korean.
+        - sentence must be natural everyday English.
+        - synonyms should be comma-separated.
+        - usage_note must be written mostly in Korean.
+        - usage_note must explain how native speakers use it in real conversation.
+        - usage_note must include two short realistic English conversation examples.
+        - Each conversation example must have A and B lines.
+        - Do not make usage_note too long.
+
+        usage_note format:
+        "이 표현은 ... 뉘앙스로 쓰입니다. 실제 대화에서는 ... 상황에서 자주 씁니다.
+
+        실제 대화 1:
+        A: ...
+        B: ...
+
+        실제 대화 2:
+        A: ...
+        B: ..."
+
+        Question: {question}
+
+        Answer: {answer}
+        """
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are an English teacher. "
+                    "Return valid JSON only."
+                )
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.2
+    )
+
+    content = response.choices[0].message.content.strip()
+
+    try:
+        result = json.loads(content)
+
+    except Exception:
+        return None
+
+    if not result.get("has_candidate"):
+        return None
+
+    return result

@@ -66,3 +66,40 @@ def search_word(db: Session, vocabulary: str):
         "word": new_word,
         "source": "openai"
     }
+
+
+def save_extracted_word(db: Session, word: WordCreate):
+    clean_vocabulary = word.vocabulary.strip().lower()
+
+    if not is_valid_input(clean_vocabulary):
+        return {
+            "valid": False,
+            "message": "올바른 영어 단어 또는 표현이 아닙니다."
+        }
+
+    existing_word = get_word_by_vocabulary(
+        db=db,
+        vocabulary=clean_vocabulary
+    )
+
+    if existing_word:
+        return {
+            "valid": True,
+            "word": existing_word,
+            "source": "db",
+            "message": "이미 저장된 단어입니다."
+        }
+
+    word.vocabulary = clean_vocabulary
+
+    new_word = create_word(
+        db=db,
+        word=word
+    )
+
+    return {
+        "valid": True,
+        "word": new_word,
+        "source": "question_note",
+        "message": "저장되었습니다."
+    }

@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from backend.app.core.templates import templates
 from backend.app.db.database import get_db
 from backend.app.crud.word import get_words_paginated
+from backend.app.schemas.word import WordCreate
+from backend.app.services.word_service import save_extracted_word
 
 
 router = APIRouter()
@@ -46,4 +48,15 @@ def words_page(
             "keyword": keyword,
             "sort": sort
         }
+    )
+
+
+@router.post("/api/words/save")
+def save_word(
+    word: WordCreate,
+    db: Session = Depends(get_db)
+):
+    return save_extracted_word(
+        db=db,
+        word=word
     )

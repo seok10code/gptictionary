@@ -5,7 +5,7 @@
 <h1 class="page-title">🎯 퀴즈</h1>
 
 <p class="page-desc">
-    문장의 빈칸에 들어갈 단어를 입력하세요.
+    빈칸 또는 뜻을 보고 알맞은 영어 단어/표현을 입력하세요.
 </p>
 
 {% if result %}
@@ -25,6 +25,16 @@
     <p>
         <strong>정답:</strong>
         {{ result.correct_answer }}
+    </p>
+
+    <p>
+        <strong>뜻:</strong>
+        {{ result.word.definition }}
+    </p>
+
+    <p>
+        <strong>예문:</strong>
+        {{ result.word.sentence }}
     </p>
 
     <p>
@@ -62,9 +72,28 @@ setTimeout(function() {
 
     <h2>문제</h2>
 
-    <p class="quiz-question">
+    <p class="quiz-question" style="white-space: pre-line;">
         {{ question.question }}
     </p>
+
+    {% if hint %}
+    <div class="quiz-hint-box">
+        <div class="quiz-hint-item">
+            <span>뜻</span>
+            <strong>{{ hint.definition }}</strong>
+        </div>
+    
+        <div class="quiz-hint-item">
+            <span>단어 수</span>
+            <strong>{{ hint.word_count }}</strong>
+        </div>
+    
+        <div class="quiz-hint-item">
+            <span>첫 글자</span>
+            <strong>{{ hint.first_letter }}</strong>
+        </div>
+    </div>
+    {% endif %}
 
     <form method="post" action="/quiz">
 

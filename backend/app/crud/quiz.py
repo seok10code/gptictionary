@@ -20,6 +20,23 @@ def make_blank_question(sentence: str, answer: str):
     return pattern.sub("_____", sentence, count=1)
 
 
+def make_definition_question(word: Word):
+    return f"뜻을 보고 알맞은 영어 단어/표현을 입력하세요.\n\n뜻: {word.definition}"
+
+
+def make_hint(word: Word):
+    vocabulary = word.vocabulary or ""
+    word_count = len(vocabulary.split())
+    first_letter = vocabulary[0] if vocabulary else ""
+
+    return {
+        "definition": word.definition,
+        "word_count": word_count,
+        "first_letter": first_letter,
+        "sentence": word.sentence,
+    }
+
+
 def get_active_question(db: Session):
     return (
         db.query(QuizQuestion)
@@ -60,8 +77,10 @@ def get_word_for_quiz(db: Session):
 
     query = (
         db.query(Word)
-        .filter(Word.sentence.isnot(None))
-        .filter(Word.sentence != "")
+        .filter(Word.vocabulary.isnot(None))
+        .filter(Word.vocabulary != "")
+        .filter(Word.definition.isnot(None))
+        .filter(Word.definition != "")
     )
 
     if latest_word_id:
@@ -82,8 +101,10 @@ def get_word_for_quiz(db: Session):
 
     return (
         db.query(Word)
-        .filter(Word.sentence.isnot(None))
-        .filter(Word.sentence != "")
+        .filter(Word.vocabulary.isnot(None))
+        .filter(Word.vocabulary != "")
+        .filter(Word.definition.isnot(None))
+        .filter(Word.definition != "")
         .order_by(
             Word.priority.desc(),
             Word.memorize_count.asc(),
@@ -122,7 +143,7 @@ def generate_quiz_question(db: Session):
     )
 
     if not question_text:
-        return None
+        question_text = make_definition_question(word)
 
     duplicate_question = (
         db.query(QuizQuestion)
@@ -150,6 +171,58 @@ def generate_quiz_question(db: Session):
     db.refresh(quiz_question)
 
     return quiz_question
+
+
+def generate_all_quiz_questions(db: Session):
+    words = (
+        db.query(Word)
+        .filter(Word.vocabulary.isnot(None))
+        .filter(Word.vocabulary != "")
+        .filter(Word.definition.isnot(None))
+        .filter(Word.definition != "")
+        .all()
+    )
+
+    created_count = 0
+    skipped_count = 0
+
+    for word in words:
+        question_text = make_blank_question(
+            sentence=word.sentence,
+            answer=word.vocabulary
+        )
+
+        if not question_text:
+            question_text = make_definition_question(word)
+
+        existing_question = (
+            db.query(QuizQuestion)
+            .filter(QuizQuestion.word_id == word.id)
+            .filter(QuizQuestion.question == question_text)
+            .first()
+        )
+
+        if existing_question:
+            skipped_count += 1
+            continue
+
+        quiz_question = QuizQuestion(
+            word_id=word.id,
+            question=question_text,
+            answer=word.vocabulary,
+            is_active=False
+        )
+
+        db.add(quiz_question)
+        created_count += 1
+
+    db.commit()
+
+    return {
+        "created_count": created_count,
+        "skipped_count": skipped_count,
+        "total_words": len(words)
+    }
 
 
 def create_quiz_log(
@@ -239,5 +312,6 @@ def submit_answer(
         "user_answer": user_answer,
         "correct_answer": question.answer,
         "question": question,
-        "word": word
+        "word": word,
+        "hint": make_hint(word),
     }

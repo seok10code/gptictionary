@@ -548,3 +548,30 @@ button:hover {
     width: 18px;
     height: 18px;
 }
+
+
+.quiz-hint-box {
+    display: flex;
+    gap: 14px;
+    margin: 20px 0;
+}
+
+.quiz-hint-item {
+    flex: 1;
+    background: #020617;
+    border: 1px solid #334155;
+    border-radius: 14px;
+    padding: 16px;
+}
+
+.quiz-hint-item span {
+    display: block;
+    color: #94a3b8;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.quiz-hint-item strong {
+    color: #f9fafb;
+    font-size: 18px;
+}

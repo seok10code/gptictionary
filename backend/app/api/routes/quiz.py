@@ -6,11 +6,30 @@ from backend.app.db.database import get_db
 from backend.app.crud.quiz import (
     get_active_question,
     generate_quiz_question,
-    submit_answer
+    generate_all_quiz_questions,
+    submit_answer,
+    make_hint,
 )
+from backend.app.models.word import Word
 
 
 router = APIRouter()
+
+
+def get_hint_for_question(db: Session, question):
+    if not question:
+        return None
+
+    word = (
+        db.query(Word)
+        .filter(Word.id == question.word_id)
+        .first()
+    )
+
+    if not word:
+        return None
+
+    return make_hint(word)
 
 
 @router.get("/quiz")
@@ -23,11 +42,14 @@ def quiz_page(
     if not question:
         question = generate_quiz_question(db)
 
+    hint = get_hint_for_question(db, question)
+
     return templates.TemplateResponse(
         request=request,
         name="quiz.html",
         context={
             "question": question,
+            "hint": hint,
             "result": None
         }
     )
@@ -51,6 +73,14 @@ def quiz_submit(
         name="quiz.html",
         context={
             "question": None,
+            "hint": None,
             "result": result
         }
     )
+
+
+@router.post("/quiz/generate-all")
+def quiz_generate_all(
+    db: Session = Depends(get_db)
+):
+    return generate_all_quiz_questions(db)

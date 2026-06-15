@@ -23,11 +23,7 @@ def search_page(request: Request):
 
 
 @router.post("/search")
-def search_submit(
-    request: Request,
-    query: str = Form(...),
-    db: Session = Depends(get_db)
-):
+def search_submit(request: Request, query: str = Form(...), db: Session = Depends(get_db)):
     result = search_word(
         db=db,
         vocabulary=query
