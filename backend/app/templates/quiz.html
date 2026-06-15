@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1 class="page-title">🎯 퀴즈</h1>
+
+<p class="page-desc">
+    문장의 빈칸에 들어갈 단어를 입력하세요.
+</p>
+
+{% if result %}
+<div class="card result-card">
+
+    {% if result.is_correct %}
+        <h2>✅ 정답입니다!</h2>
+    {% else %}
+        <h2>❌ 오답입니다.</h2>
+
+        <p>
+            <strong>내 답:</strong>
+            {{ result.user_answer }}
+        </p>
+    {% endif %}
+
+    <p>
+        <strong>정답:</strong>
+        {{ result.correct_answer }}
+    </p>
+
+    <p>
+        <strong>Priority:</strong>
+        {{ result.word.priority }}
+    </p>
+
+    <p>
+        <strong>정답 수:</strong>
+        {{ result.word.total_correct }}
+    </p>
+
+    <p>
+        <strong>오답 수:</strong>
+        {{ result.word.total_wrong }}
+    </p>
+
+    <p class="page-desc">
+        3초 후 다음 문제로 이동합니다...
+    </p>
+
+</div>
+
+<script>
+setTimeout(function() {
+    window.location.href = "/quiz";
+}, 3000);
+</script>
+{% endif %}
+
+
+{% if question and not result %}
+
+<div class="card result-card">
+
+    <h2>문제</h2>
+
+    <p class="quiz-question">
+        {{ question.question }}
+    </p>
+
+    <form method="post" action="/quiz">
+
+        <input
+            type="hidden"
+            name="question_id"
+            value="{{ question.id }}"
+        >
+
+        <div class="form-row">
+
+            <input
+                class="input"
+                type="text"
+                name="user_answer"
+                placeholder="정답 입력"
+                autocomplete="off"
+                required
+                autofocus
+            >
+
+            <button class="btn" type="submit">
+                제출
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% elif not question and not result %}
+
+<div class="card result-card">
+
+    <h2>문제가 없습니다.</h2>
+
+    <p>
+        아직 생성된 퀴즈가 없습니다.
+    </p>
+
+</div>
+
+{% endif %}
+
+{% endblock %}

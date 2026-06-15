@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1 class="page-title">🔍 단어 검색</h1>
+
+<p class="page-desc">
+    DB에 있으면 저장된 데이터를 보여주고, 없으면 AI가 생성해서 저장합니다.
+</p>
+
+<div class="card">
+    <form method="post" action="/search">
+        <div class="form-row">
+            <input
+                class="input"
+                type="text"
+                name="query"
+                value="{{ query }}"
+                placeholder="검색할 영어 단어 또는 표현을 입력하세요"
+                required
+            >
+
+            <button class="btn" type="submit">검색</button>
+        </div>
+    </form>
+</div>
+
+{% if error %}
+<div class="card result-card">
+    <p>{{ error }}</p>
+</div>
+{% endif %}
+
+{% if result %}
+<div class="card result-card">
+    <h2>{{ result.vocabulary }}</h2>
+
+    {% if source == "db" %}
+        <p class="source-text">DB 저장 데이터</p>
+    {% elif source == "openai" %}
+        <p class="source-text">AI 생성 후 DB 저장</p>
+    {% endif %}
+
+    <div class="result-section">
+        <h3>뜻</h3>
+        <p>{{ result.definition }}</p>
+    </div>
+
+    <div class="result-section">
+        <h3>예문</h3>
+        <p>{{ result.sentence }}</p>
+    </div>
+
+    <div class="result-section">
+        <h3>동의어</h3>
+        <p>{{ result.synonyms }}</p>
+    </div>
+
+    <div class="result-section usage-note-box">
+        <h3>뉘앙스 / 실생활 사용법</h3>
+        <p>{{ result.usage_note }}</p>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="page-title">질문</h1>
+<p class="page-desc">영어 표현이나 문장에 대해 질문해보세요.</p>
+
+<div class="card">
+    <form method="post" action="/questions">
+        <input
+            type="text"
+            name="question"
+            placeholder="예: come out 뜻이 뭐야?"
+            value="{{ question or '' }}"
+            style="width: 100%; padding: 12px; margin-bottom: 12px;"
+            required
+        >
+
+        <button type="submit">
+            질문하기
+        </button>
+    </form>
+</div>
+
+{% if answer %}
+<div class="card" style="margin-top: 20px;">
+    <h2>답변</h2>
+    <p>{{ answer }}</p>
+</div>
+{% endif %}
+
+{% if similar_questions %}
+<div class="card" style="margin-top: 20px;">
+    <h2>비슷한 질문</h2>
+
+    {% for item in similar_questions %}
+    <div style="margin-bottom: 16px;">
+        <p><strong>질문:</strong> {{ item.question }}</p>
+        <p><strong>답변:</strong> {{ item.answer }}</p>
+        <p><strong>유사도:</strong> {{ item.score }}</p>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

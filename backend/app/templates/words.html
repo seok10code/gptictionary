@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1 class="page-title">📚 단어장</h1>
+
+<p class="page-desc">
+    저장된 단어 전체 목록입니다. 자세한 설명은 검색 화면에서 확인하세요.
+</p>
+
+<div class="card">
+
+    <form method="get" action="/words" class="filter-form">
+
+        <input
+            class="input"
+            type="text"
+            name="keyword"
+            value="{{ keyword }}"
+            placeholder="단어 검색"
+        >
+
+        <select
+            class="input select-input"
+            name="sort"
+            onchange="this.form.submit()"
+        >
+            <option value="latest" {% if sort == "latest" %}selected{% endif %}>최신순</option>
+            <option value="abc" {% if sort == "abc" %}selected{% endif %}>ABC순</option>
+            <option value="id" {% if sort == "id" %}selected{% endif %}>번호순</option>
+            <option value="priority" {% if sort == "priority" %}selected{% endif %}>Priority순</option>
+            <option value="memorize" {% if sort == "memorize" %}selected{% endif %}>Memorize순</option>
+        </select>
+
+        <button class="btn" type="submit">검색</button>
+
+    </form>
+
+    <p class="list-info">
+        총 {{ total_count }}개 / {{ page }}페이지 / 전체 {{ total_pages }}페이지
+    </p>
+
+    <table class="word-table">
+
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>단어</th>
+                <th>뜻</th>
+                <th>예문</th>
+                <th>동의어</th>
+                <th>Priority</th>
+                <th>Memorize</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for word in words %}
+
+            <tr>
+                <td>{{ word.id }}</td>
+                <td class="word-main">{{ word.vocabulary }}</td>
+                <td>{{ word.definition }}</td>
+                <td class="sentence-cell">{{ word.sentence }}</td>
+                <td>{{ word.synonyms }}</td>
+                <td>{{ word.priority }}</td>
+                <td>{{ word.memorize_count }}</td>
+            </tr>
+
+            {% else %}
+
+            <tr>
+                <td colspan="7" class="empty-row">
+                    저장된 단어가 없습니다.
+                </td>
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+    <div class="pagination">
+
+        {% if page > 1 %}
+            <a
+                class="btn"
+                href="/words?page={{ page - 1 }}&keyword={{ keyword }}&sort={{ sort }}"
+            >
+                이전
+            </a>
+        {% endif %}
+
+        <span class="page-number">
+            {{ page }} / {{ total_pages }}
+        </span>
+
+        {% if page < total_pages %}
+            <a
+                class="btn"
+                href="/words?page={{ page + 1 }}&keyword={{ keyword }}&sort={{ sort }}"
+            >
+                다음
+            </a>
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

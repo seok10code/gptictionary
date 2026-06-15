@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1 class="page-title">통계</h1>
+<p class="page-desc">누적 학습 데이터를 분석합니다.</p>
+
+<div class="stats-grid">
+    <div class="card stat-card">
+        <h3>총 단어 수</h3>
+        <p class="stat-number">{{ stats.total_words }}</p>
+    </div>
+
+    <div class="card stat-card">
+        <h3>암기 완료</h3>
+        <p class="stat-number">{{ stats.memorized_words }}</p>
+    </div>
+
+    <div class="card stat-card">
+        <h3>복습 필요</h3>
+        <p class="stat-number">{{ stats.review_words }}</p>
+    </div>
+</div>
+
+<div class="card chart-card">
+    <h2>최근 7일 단어 추가 추이</h2>
+    <canvas id="dailyWordsChart"></canvas>
+</div>
+
+<div class="card chart-card">
+    <h2>많이 틀린 단어 TOP 10</h2>
+    <canvas id="wrongWordsChart"></canvas>
+</div>
+
+<div class="card chart-card">
+    <h2>많이 외운 단어 TOP 10</h2>
+    <canvas id="memorizedWordsChart"></canvas>
+</div>
+
+<div class="card">
+    <h2>최근 추가한 단어</h2>
+
+    {% for word in recent_words %}
+        <p>{{ word.vocabulary }}</p>
+    {% endfor %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const wrongLabels = {{ wrong_chart_labels | tojson }};
+    const wrongData = {{ wrong_chart_data | tojson }};
+
+    const memorizedLabels = {{ memorized_chart_labels | tojson }};
+    const memorizedData = {{ memorized_chart_data | tojson }};
+
+    const dailyLabels = {{ daily_labels | tojson }};
+    const dailyData = {{ daily_data | tojson }};
+
+    new Chart(document.getElementById("dailyWordsChart"), {
+        type: "line",
+        data: {
+            labels: dailyLabels,
+            datasets: [{
+                label: "추가 단어 수",
+                data: dailyData,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+
+    new Chart(document.getElementById("wrongWordsChart"), {
+        type: "bar",
+        data: {
+            labels: wrongLabels,
+            datasets: [{
+                label: "오답 횟수",
+                data: wrongData
+            }]
+        },
+        options: {
+            responsive: true,
+            indexAxis: "y",
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    new Chart(document.getElementById("memorizedWordsChart"), {
+        type: "bar",
+        data: {
+            labels: memorizedLabels,
+            datasets: [{
+                label: "정답 횟수",
+                data: memorizedData
+            }]
+        },
+        options: {
+            responsive: true,
+            indexAxis: "y",
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+</script>
+
+{% endblock %}

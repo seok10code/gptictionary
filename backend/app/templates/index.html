@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">대시보드</h1>
+        <p class="page-desc">오늘 학습할 내용과 최근 기록을 확인합니다.</p>
+    </div>
+
+    <a href="/quiz" class="primary-action">퀴즈 시작</a>
+</div>
+
+<div class="metric-grid">
+    <div class="metric-card gradient-blue">
+        <span class="metric-label">저장된 단어</span>
+        <strong>{{ dashboard.total_words }}</strong>
+        <small>Words in your vault</small>
+    </div>
+
+    <div class="metric-card gradient-purple">
+        <span class="metric-label">복습 필요</span>
+        <strong>{{ dashboard.review_words }}</strong>
+        <small>Need review</small>
+    </div>
+
+    <div class="metric-card gradient-green">
+        <span class="metric-label">오늘 추가</span>
+        <strong>{{ dashboard.today_added }}</strong>
+        <small>Added today</small>
+    </div>
+
+    <div class="metric-card gradient-orange">
+        <span class="metric-label">오늘 퀴즈</span>
+        <strong>{{ dashboard.today_quiz }}</strong>
+        <small>Quiz attempts</small>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="panel-card">
+        <div class="panel-header">
+            <h2>오늘의 복습 단어</h2>
+            <span>Priority</span>
+        </div>
+
+        {% if dashboard.today_review_words %}
+            {% for word in dashboard.today_review_words %}
+                <div class="word-row">
+                    <div>
+                        <strong>{{ word.vocabulary }}</strong>
+                        <p>오답 {{ word.priority }}회 · 정답 {{ word.memorize_count }}회</p>
+                    </div>
+                    <span class="badge danger">Review</span>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="empty-text">복습할 단어가 없습니다.</p>
+        {% endif %}
+    </div>
+
+    <div class="panel-card">
+        <div class="panel-header">
+            <h2>최근 추가 단어</h2>
+            <span>Latest</span>
+        </div>
+
+        {% if dashboard.recent_words %}
+            {% for word in dashboard.recent_words %}
+                <div class="word-row">
+                    <div>
+                        <strong>{{ word.vocabulary }}</strong>
+                        <p>{{ word.definition }}</p>
+                    </div>
+                    <span class="badge">New</span>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="empty-text">최근 추가된 단어가 없습니다.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
